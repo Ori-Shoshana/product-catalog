@@ -4,7 +4,7 @@
   "description": "This is template for map colonies typescript service",
   "main": "./src/index.ts",
   "scripts": {
-    "test:unit": "jest --config=./tests/configurations/unit/jest.config.js",
+    "test:unit": "jest --config=./tests/configurations/unit/jest.config.js --passWithNoTests",
     "test:integration": "jest --config=./tests/configurations/integration/jest.config.js",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",

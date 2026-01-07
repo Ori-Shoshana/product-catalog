@@ -23,6 +23,7 @@ module.exports = {
     ],
   ],
   moduleDirectories: ['node_modules', 'src'],
+  modulePathIgnorePatterns: ['<rootDir>/dist/'],
   testEnvironment: 'node',
   coverageThreshold: {
     global: {

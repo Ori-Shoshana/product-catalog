@@ -13,8 +13,11 @@
     "shared": {},
     "logger": {
       "level": "info",
-      "prettyPrint": false
+      "prettyPrint": true
     }
+  },
+  "db": {
+    "connectionString": "postgres://postgres:postgres@localhost:5432/products_db"
   },
   "server": {
     "port": 8080,

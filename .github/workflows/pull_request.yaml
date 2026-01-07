@@ -76,8 +76,10 @@ jobs:
       postgres:
         image: postgres:14
         env:
+          DB_HOST: localhost
+          DB_PORT: 5432
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: password
+          POSTGRES_PASSWORD: postgres
           POSTGRES_DB: product_catalog
         ports:
           - 5432:5432

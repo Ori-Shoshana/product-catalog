@@ -80,7 +80,7 @@ jobs:
           DB_PORT: 5432
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: product_catalog
+          POSTGRES_DB: products_db
         ports:
           - 5432:5432
         options: >-

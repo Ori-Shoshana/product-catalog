@@ -14,7 +14,8 @@ let configInstance: ConfigType | undefined;
 async function initConfig(offlineMode?: boolean): Promise<void> {
   configInstance = await config({
     schema: commonBoilerplateV2,
-    offlineMode,
+
+    offlineMode: true,
   });
 }
 

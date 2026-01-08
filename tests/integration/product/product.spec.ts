@@ -32,15 +32,12 @@ describe('Product Integration Tests', function () {
   });
 
   afterAll(async function () {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    if (dbPool) {
-      await dbPool.end();
-    }
+    await dbPool.end();
   });
 
   describe('Happy Path', function () {
     it('should create a product and return 201', async function () {
-      const body: operations['createProduct']['requestBody']['content']['application/json'] = {
+      const body = {
         name: 'Integration Map',
         description: 'Valid description string',
         type: 'raster',
@@ -51,17 +48,57 @@ describe('Product Integration Tests', function () {
         maxZoom: 20,
       };
 
-      const response = await requestSender.createProduct({ requestBody: body });
+      const response = (await (requestSender.createProduct as unknown as (args: { requestBody: unknown }) => Promise<unknown>)({
+        requestBody: body,
+      })) as { status: number };
 
       expect(response.status).toBe(httpStatusCodes.CREATED);
       expect(response).toSatisfyApiSpec();
     });
 
     it('should retrieve all products and return 200', async function () {
-      const response = await requestSender.getProducts({});
+      const response = (await (requestSender.getProducts as unknown as (args: unknown) => Promise<unknown>)({})) as { status: number };
 
       expect(response.status).toBe(httpStatusCodes.OK);
       expect(response).toSatisfyApiSpec();
+    });
+
+    it('should update an existing product and return 200', async function () {
+      const createRes = (await dbPool.query(
+        "INSERT INTO products (name, type, consumption_protocol, bounding_polygon) VALUES ('To Update', 'raster', 'WMS', ST_GeomFromText('POLYGON((30 10, 40 40, 20 40, 10 20, 30 10))')) RETURNING id::text"
+      )) as { rows: { id: string }[] };
+
+      const id = createRes.rows[0]!.id;
+
+      const updateBody = {
+        name: 'Updated Name',
+        type: 'raster',
+        consumptionProtocol: 'WMS',
+        boundingPolygon: 'POLYGON((30 10, 40 40, 20 40, 10 20, 30 10))',
+      };
+
+      const response = (await (
+        requestSender.updateProduct as unknown as (args: { pathParams: { id: string }; requestBody: unknown }) => Promise<unknown>
+      )({
+        pathParams: { id },
+        requestBody: updateBody,
+      })) as { status: number };
+
+      expect(response.status).toBe(httpStatusCodes.OK);
+      expect(response).toSatisfyApiSpec();
+    });
+
+    it('should delete an existing product and return 204', async function () {
+      const createRes = (await dbPool.query(
+        "INSERT INTO products (name, type, consumption_protocol) VALUES ('To Delete', 'raster', 'WMS') RETURNING id::text"
+      )) as { rows: { id: string }[] };
+      const id = createRes.rows[0]!.id;
+
+      const response = (await (requestSender.deleteProduct as unknown as (args: { pathParams: { id: string } }) => Promise<unknown>)({
+        pathParams: { id },
+      })) as { status: number };
+
+      expect(response.status).toBe(httpStatusCodes.NO_CONTENT);
     });
   });
 
@@ -69,17 +106,17 @@ describe('Product Integration Tests', function () {
     it('should return 400 when name is missing', async function () {
       const invalidInput = { type: 'raster' };
 
-      const response = await requestSender.createProduct({
-        requestBody: invalidInput as unknown as operations['createProduct']['requestBody']['content']['application/json'],
-      });
+      const response = (await (requestSender.createProduct as unknown as (args: { requestBody: unknown }) => Promise<unknown>)({
+        requestBody: invalidInput,
+      })) as { status: number };
 
       expect(response.status).toBe(httpStatusCodes.BAD_REQUEST);
     });
 
     it('should return 404 for non-existent product id', async function () {
-      const response = await requestSender.getProductById({
+      const response = (await (requestSender.getProductById as unknown as (args: { pathParams: { id: string } }) => Promise<unknown>)({
         pathParams: { id: '999999' },
-      });
+      })) as { status: number };
 
       expect(response.status).toBe(httpStatusCodes.NOT_FOUND);
     });
@@ -87,31 +124,30 @@ describe('Product Integration Tests', function () {
 
   describe('Edge Cases', function () {
     it('should return 500 when the DB is down', async function () {
-      // יוצרים דריסה זמנית של השאילתה כדי לסמל שגיאה
-      // eslint-disable-next-line @typescript-eslint/unbound-method
-      const originalQuery = dbPool.query;
+      const originalQuery = dbPool.query.bind(dbPool);
       dbPool.query = jest.fn().mockRejectedValue(new Error('DB connection error'));
 
       const validInput = {
         name: 'Valid Name',
-        description: 'Description for valid product',
         type: 'raster' as ProductType,
         consumptionProtocol: 'WMS' as ConsumptionProtocol,
         boundingPolygon: 'POLYGON((30 10, 40 40, 20 40, 10 20, 30 10))',
-        resolutionBest: 0.1,
-        minZoom: 0,
-        maxZoom: 20,
       };
 
-      const response = await requestSender.createProduct({ requestBody: validInput });
+      const response = await (requestSender.createProduct as unknown as (args: { requestBody: unknown }) => Promise<{ status: number }>)({
+        requestBody: validInput,
+      });
+
       expect(response.status).toBe(httpStatusCodes.INTERNAL_SERVER_ERROR);
 
-      // מחזירים את המצב לקדמותו
       dbPool.query = originalQuery;
     });
 
     it('should return 400 if API endpoint is incorrect', async function () {
-      const response = await requestSender.getProductById({ pathParams: { id: 'invalidId' } });
+      const response = (await (requestSender.getProductById as unknown as (args: { pathParams: { id: string } }) => Promise<unknown>)({
+        pathParams: { id: 'invalidId' },
+      })) as { status: number };
+
       expect(response.status).toBe(httpStatusCodes.BAD_REQUEST);
     });
   });

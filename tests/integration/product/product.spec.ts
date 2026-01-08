@@ -89,42 +89,27 @@ describe('Product Integration Tests', function () {
       expect(response).toSatisfyApiSpec();
     });
 
-    // טסט משופר: כולל את כל השדות כדי לעבור ולידציה וגם בודק פילטרים מרובים לכיסוי אחוזים
-    it('should query products with complex filters and return 200', async function () {
+    // הטסט החשוב ביותר: מפעיל את כל ה-IF-ים ב-Repository כדי להגיע לכיסוי של 80%
+    it('should cover all query filters and return 200', async function () {
       await dbPool.query(
         `INSERT INTO products 
         (name, description, type, consumption_protocol, bounding_polygon, resolution_best, min_zoom, max_zoom) 
         VALUES 
-        ('FilterTest', 'desc', 'raster', 'WMS', ST_GeomFromText('POLYGON((30 10, 40 40, 20 40, 10 20, 30 10))'), 0.1, 5, 10)`
+        ('MegaTest', 'desc', 'raster', 'WMS', ST_GeomFromText('POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))'), 0.1, 5, 15)`
       );
 
       const response = await (requestSender.getProducts as unknown as (args: { query: unknown }) => Promise<{ status: number; body: unknown[] }>)({
         query: {
-          name: 'FilterTest',
+          name: 'MegaTest',
           type: 'raster',
-          minZoomGreater: 4,
-          maxZoomLess: 11,
-          resolutionBest: 0.1,
-        },
-      });
-
-      expect(response.status).toBe(httpStatusCodes.OK);
-      expect(response.body).toHaveLength(1);
-      expect(response).toSatisfyApiSpec();
-    });
-
-    // טסט נוסף לכיסוי פילטרים גיאוגרפיים (חשוב מאוד ל-Branch Coverage של ה-Repository)
-    it('should query products using spatial filters and return 200', async function () {
-      await dbPool.query(
-        `INSERT INTO products 
-        (name, description, type, consumption_protocol, bounding_polygon, resolution_best, min_zoom, max_zoom) 
-        VALUES 
-        ('SpatialTest', 'desc', 'raster', 'WMS', ST_GeomFromText('POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))'), 0.1, 0, 20)`
-      );
-
-      const response = await (requestSender.getProducts as unknown as (args: { query: unknown }) => Promise<{ status: number; body: unknown[] }>)({
-        query: {
-          boundingPolygonIntersects: 'POLYGON((5 5, 15 5, 15 15, 5 15, 5 5))',
+          consumptionProtocol: 'WMS',
+          minZoomGreaterEqual: 4,
+          minZoomLessEqual: 6,
+          maxZoomGreaterEqual: 14,
+          maxZoomLessEqual: 16,
+          resolutionBestGreaterEqual: 0.05,
+          resolutionBestLessEqual: 0.15,
+          boundingPolygonContains: 'POLYGON((2 2, 3 2, 3 3, 2 3, 2 2))',
         },
       });
 
@@ -148,19 +133,29 @@ describe('Product Integration Tests', function () {
   });
 
   describe('Bad Path', function () {
+    it('should return 404 for non-existent product id on update', async function () {
+      const response = (await (
+        requestSender.updateProduct as unknown as (args: { pathParams: { id: string }; requestBody: unknown }) => Promise<unknown>
+      )({
+        pathParams: { id: '999999' },
+        requestBody: { name: 'None', type: 'raster', consumptionProtocol: 'WMS', boundingPolygon: 'POLYGON((0 0, 1 0, 1 1, 0 1, 0 0))' },
+      })) as { status: number };
+      expect(response.status).toBe(httpStatusCodes.NOT_FOUND);
+    });
+
+    it('should return 404 for non-existent product id on delete', async function () {
+      const response = (await (requestSender.deleteProduct as unknown as (args: { pathParams: { id: string } }) => Promise<unknown>)({
+        pathParams: { id: '999999' },
+      })) as { status: number };
+      expect(response.status).toBe(httpStatusCodes.NOT_FOUND);
+    });
+
     it('should return 400 when name is missing', async function () {
       const invalidInput = { type: 'raster' };
       const response = (await (requestSender.createProduct as unknown as (args: { requestBody: unknown }) => Promise<unknown>)({
         requestBody: invalidInput,
       })) as { status: number };
       expect(response.status).toBe(httpStatusCodes.BAD_REQUEST);
-    });
-
-    it('should return 404 for non-existent product id', async function () {
-      const response = (await (requestSender.getProductById as unknown as (args: { pathParams: { id: string } }) => Promise<unknown>)({
-        pathParams: { id: '999999' },
-      })) as { status: number };
-      expect(response.status).toBe(httpStatusCodes.NOT_FOUND);
     });
   });
 

@@ -74,7 +74,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:14
+        image: postgis/postgis:14-3.4
         env:
           DB_HOST: localhost
           DB_PORT: 5432
@@ -101,7 +101,30 @@ jobs:
           node-version: ${{ matrix.node }}
 
       - name: Run tests
-        run: npm run test
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_NAME: products_db
+          PGPASSWORD: password
+        run: |
+          psql -h localhost -U postgres -d products_db -c "
+            CREATE EXTENSION IF NOT EXISTS postgis;
+            CREATE TABLE IF NOT EXISTS products (
+              id SERIAL PRIMARY KEY,
+              name TEXT NOT NULL,
+              description TEXT,
+              bounding_polygon GEOMETRY,
+              consumption_link TEXT,
+              type TEXT,
+              consumption_protocol TEXT,
+              resolution_best FLOAT,
+              min_zoom INTEGER,
+              max_zoom INTEGER
+            );"
+
+            npm run test
 
       - uses: actions/upload-artifact@v4
         with:

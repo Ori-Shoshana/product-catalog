@@ -8,7 +8,7 @@ import { Product, ProductCreateInput, ProductUpdateInput, ProductQueryFilters } 
 export class ProductRepository {
   private readonly baseSelect = `
     SELECT
-      id,
+      id::text as id,
       name,
       description,
       ST_AsText(bounding_polygon) as "boundingPolygon",
@@ -34,7 +34,7 @@ export class ProductRepository {
       VALUES
         ($1, $2, ST_GeomFromText($3), $4, $5, $6, $7, $8, $9)
       RETURNING
-        id, name, description, ST_AsText(bounding_polygon) as "boundingPolygon",
+        id::text as id, name, description, ST_AsText(bounding_polygon) as "boundingPolygon",
         consumption_link as "consumptionLink", type, consumption_protocol as "consumptionProtocol",
         resolution_best as "resolutionBest", min_zoom as "minZoom", max_zoom as "maxZoom"
     `;
@@ -81,7 +81,7 @@ export class ProductRepository {
         resolution_best = $7, min_zoom = $8, max_zoom = $9
       WHERE id = $10
       RETURNING
-        id, name, description, ST_AsText(bounding_polygon) as "boundingPolygon",
+        id::text as id, name, description, ST_AsText(bounding_polygon) as "boundingPolygon",
         consumption_link as "consumptionLink", type, consumption_protocol as "consumptionProtocol",
         resolution_best as "resolutionBest", min_zoom as "minZoom", max_zoom as "maxZoom"
     `;

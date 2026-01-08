@@ -11,34 +11,33 @@ import { ConsumptionProtocol, ProductType } from '@src/product/models/product';
 
 describe('Product Integration Tests', function () {
   let requestSender: RequestSender<paths, operations>;
-  let dbPool: Pool | undefined;
+  let dbPool: Pool;
 
   beforeAll(async function () {
     await initConfig(true);
-  });
-
-  beforeEach(async function () {
     const [app, container] = await getApp({
       override: [
-        { token: SERVICES.LOGGER, provider: { useValue: jsLogger({ enabled: true, level: 'error' }) } },
+        { token: SERVICES.LOGGER, provider: { useValue: jsLogger({ enabled: false }) } },
         { token: SERVICES.TRACER, provider: { useValue: trace.getTracer('testTracer') } },
       ],
       useChild: true,
     });
 
     dbPool = container.resolve<Pool>('DbPool');
-    await dbPool.query('DELETE FROM products');
-
     requestSender = await createRequestSender<paths, operations>('openapi3.yaml', app);
   });
 
+  beforeEach(async function () {
+    await dbPool.query('DELETE FROM products');
+  });
+
   afterAll(async function () {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (dbPool) {
       await dbPool.end();
     }
   });
 
-  // בדיקות "Happy Path"
   describe('Happy Path', function () {
     it('should create a product and return 201', async function () {
       const body: operations['createProduct']['requestBody']['content']['application/json'] = {
@@ -52,16 +51,14 @@ describe('Product Integration Tests', function () {
         maxZoom: 20,
       };
 
-      const response = (await (requestSender.createProduct as unknown as (args: { requestBody: typeof body }) => Promise<unknown>)({
-        requestBody: body,
-      })) as { status: number; body: { id: string } };
+      const response = await requestSender.createProduct({ requestBody: body });
 
       expect(response.status).toBe(httpStatusCodes.CREATED);
       expect(response).toSatisfyApiSpec();
     });
 
     it('should retrieve all products and return 200', async function () {
-      const response = (await (requestSender.getProducts as unknown as () => Promise<unknown>)()) as { status: number; body: unknown[] };
+      const response = await requestSender.getProducts({});
 
       expect(response.status).toBe(httpStatusCodes.OK);
       expect(response).toSatisfyApiSpec();
@@ -72,19 +69,17 @@ describe('Product Integration Tests', function () {
     it('should return 400 when name is missing', async function () {
       const invalidInput = { type: 'raster' };
 
-      const response = (await (requestSender.createProduct as unknown as (args: { requestBody: unknown }) => Promise<unknown>)({
-        requestBody: invalidInput,
-      })) as { status: number };
+      const response = await requestSender.createProduct({
+        requestBody: invalidInput as unknown as operations['createProduct']['requestBody']['content']['application/json'],
+      });
 
       expect(response.status).toBe(httpStatusCodes.BAD_REQUEST);
     });
 
     it('should return 404 for non-existent product id', async function () {
-      const response = (await (requestSender.getProductById as unknown as (args: { pathParams: { id: string } }) => Promise<unknown>)({
-        pathParams: {
-          id: '999999',
-        },
-      })) as { status: number };
+      const response = await requestSender.getProductById({
+        pathParams: { id: '999999' },
+      });
 
       expect(response.status).toBe(httpStatusCodes.NOT_FOUND);
     });
@@ -92,10 +87,9 @@ describe('Product Integration Tests', function () {
 
   describe('Edge Cases', function () {
     it('should return 500 when the DB is down', async function () {
-      if (!dbPool) {
-        throw new Error('DB pool is not initialized');
-      }
-
+      // יוצרים דריסה זמנית של השאילתה כדי לסמל שגיאה
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      const originalQuery = dbPool.query;
       dbPool.query = jest.fn().mockRejectedValue(new Error('DB connection error'));
 
       const validInput = {
@@ -111,6 +105,9 @@ describe('Product Integration Tests', function () {
 
       const response = await requestSender.createProduct({ requestBody: validInput });
       expect(response.status).toBe(httpStatusCodes.INTERNAL_SERVER_ERROR);
+
+      // מחזירים את המצב לקדמותו
+      dbPool.query = originalQuery;
     });
 
     it('should return 400 if API endpoint is incorrect', async function () {

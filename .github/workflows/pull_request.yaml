@@ -76,7 +76,7 @@ jobs:
       postgres:
         image: postgis/postgis:14-3.4
         env:
-          DB_HOST: localhost
+          DB_HOST: 127.0.0.1
           DB_PORT: 5432
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres

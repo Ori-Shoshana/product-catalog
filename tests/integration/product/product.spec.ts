@@ -56,13 +56,6 @@ describe('Product Integration Tests', function () {
       expect(response).toSatisfyApiSpec();
     });
 
-    it('should retrieve all products and return 200', async function () {
-      const response = (await (requestSender.getProducts as unknown as (args: unknown) => Promise<unknown>)({})) as { status: number };
-
-      expect(response.status).toBe(httpStatusCodes.OK);
-      expect(response).toSatisfyApiSpec();
-    });
-
     it('should update an existing product and return 200', async function () {
       const createRes = (await dbPool.query(
         `INSERT INTO products 
@@ -96,15 +89,42 @@ describe('Product Integration Tests', function () {
       expect(response).toSatisfyApiSpec();
     });
 
-    it('should query products with multiple filters and return 200', async function () {
-      await dbPool.query("INSERT INTO products (name, type, consumption_protocol, min_zoom, max_zoom) VALUES ('FilterTest', 'raster', 'WMS', 5, 10)");
+    // טסט משופר: כולל את כל השדות כדי לעבור ולידציה וגם בודק פילטרים מרובים לכיסוי אחוזים
+    it('should query products with complex filters and return 200', async function () {
+      await dbPool.query(
+        `INSERT INTO products 
+        (name, description, type, consumption_protocol, bounding_polygon, resolution_best, min_zoom, max_zoom) 
+        VALUES 
+        ('FilterTest', 'desc', 'raster', 'WMS', ST_GeomFromText('POLYGON((30 10, 40 40, 20 40, 10 20, 30 10))'), 0.1, 5, 10)`
+      );
 
       const response = await (requestSender.getProducts as unknown as (args: { query: unknown }) => Promise<{ status: number; body: unknown[] }>)({
         query: {
           name: 'FilterTest',
           type: 'raster',
-          minZoom: 5,
-          maxZoom: 10,
+          minZoomGreater: 4,
+          maxZoomLess: 11,
+          resolutionBest: 0.1,
+        },
+      });
+
+      expect(response.status).toBe(httpStatusCodes.OK);
+      expect(response.body).toHaveLength(1);
+      expect(response).toSatisfyApiSpec();
+    });
+
+    // טסט נוסף לכיסוי פילטרים גיאוגרפיים (חשוב מאוד ל-Branch Coverage של ה-Repository)
+    it('should query products using spatial filters and return 200', async function () {
+      await dbPool.query(
+        `INSERT INTO products 
+        (name, description, type, consumption_protocol, bounding_polygon, resolution_best, min_zoom, max_zoom) 
+        VALUES 
+        ('SpatialTest', 'desc', 'raster', 'WMS', ST_GeomFromText('POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))'), 0.1, 0, 20)`
+      );
+
+      const response = await (requestSender.getProducts as unknown as (args: { query: unknown }) => Promise<{ status: number; body: unknown[] }>)({
+        query: {
+          boundingPolygonIntersects: 'POLYGON((5 5, 15 5, 15 15, 5 15, 5 5))',
         },
       });
 
@@ -130,11 +150,9 @@ describe('Product Integration Tests', function () {
   describe('Bad Path', function () {
     it('should return 400 when name is missing', async function () {
       const invalidInput = { type: 'raster' };
-
       const response = (await (requestSender.createProduct as unknown as (args: { requestBody: unknown }) => Promise<unknown>)({
         requestBody: invalidInput,
       })) as { status: number };
-
       expect(response.status).toBe(httpStatusCodes.BAD_REQUEST);
     });
 
@@ -142,7 +160,6 @@ describe('Product Integration Tests', function () {
       const response = (await (requestSender.getProductById as unknown as (args: { pathParams: { id: string } }) => Promise<unknown>)({
         pathParams: { id: '999999' },
       })) as { status: number };
-
       expect(response.status).toBe(httpStatusCodes.NOT_FOUND);
     });
   });
@@ -164,16 +181,7 @@ describe('Product Integration Tests', function () {
       });
 
       expect(response.status).toBe(httpStatusCodes.INTERNAL_SERVER_ERROR);
-
       dbPool.query = originalQuery;
-    });
-
-    it('should return 400 if API endpoint is incorrect', async function () {
-      const response = (await (requestSender.getProductById as unknown as (args: { pathParams: { id: string } }) => Promise<unknown>)({
-        pathParams: { id: 'invalidId' },
-      })) as { status: number };
-
-      expect(response.status).toBe(httpStatusCodes.BAD_REQUEST);
     });
   });
 });

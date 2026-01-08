@@ -65,16 +65,24 @@ describe('Product Integration Tests', function () {
 
     it('should update an existing product and return 200', async function () {
       const createRes = (await dbPool.query(
-        "INSERT INTO products (name, type, consumption_protocol, bounding_polygon) VALUES ('To Update', 'raster', 'WMS', ST_GeomFromText('POLYGON((30 10, 40 40, 20 40, 10 20, 30 10))')) RETURNING id::text"
+        `INSERT INTO products 
+        (name, description, type, consumption_protocol, bounding_polygon, resolution_best, min_zoom, max_zoom) 
+        VALUES 
+        ('To Update', 'initial description', 'raster', 'WMS', ST_GeomFromText('POLYGON((30 10, 40 40, 20 40, 10 20, 30 10))'), 0.1, 0, 20) 
+        RETURNING id::text`
       )) as { rows: { id: string }[] };
 
       const id = createRes.rows[0]!.id;
 
       const updateBody = {
         name: 'Updated Name',
+        description: 'Updated description',
         type: 'raster',
         consumptionProtocol: 'WMS',
         boundingPolygon: 'POLYGON((30 10, 40 40, 20 40, 10 20, 30 10))',
+        resolutionBest: 0.5,
+        minZoom: 1,
+        maxZoom: 18,
       };
 
       const response = (await (
@@ -85,6 +93,23 @@ describe('Product Integration Tests', function () {
       })) as { status: number };
 
       expect(response.status).toBe(httpStatusCodes.OK);
+      expect(response).toSatisfyApiSpec();
+    });
+
+    it('should query products with multiple filters and return 200', async function () {
+      await dbPool.query("INSERT INTO products (name, type, consumption_protocol, min_zoom, max_zoom) VALUES ('FilterTest', 'raster', 'WMS', 5, 10)");
+
+      const response = await (requestSender.getProducts as unknown as (args: { query: unknown }) => Promise<{ status: number; body: unknown[] }>)({
+        query: {
+          name: 'FilterTest',
+          type: 'raster',
+          minZoom: 5,
+          maxZoom: 10,
+        },
+      });
+
+      expect(response.status).toBe(httpStatusCodes.OK);
+      expect(response.body).toHaveLength(1);
       expect(response).toSatisfyApiSpec();
     });
 

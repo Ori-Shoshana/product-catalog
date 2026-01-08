@@ -89,7 +89,6 @@ describe('Product Integration Tests', function () {
       expect(response).toSatisfyApiSpec();
     });
 
-    // הטסט החשוב ביותר: מפעיל את כל ה-IF-ים ב-Repository כדי להגיע לכיסוי של 80%
     it('should cover all query filters and return 200', async function () {
       await dbPool.query(
         `INSERT INTO products 

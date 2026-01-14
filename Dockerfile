@@ -1,34 +1,37 @@
+# ---------- build ----------
 FROM node:24 AS build
-
-
 WORKDIR /tmp/buildApp
 
-COPY ./package*.json ./
-COPY .husky/ .husky/
+COPY package*.json ./
+RUN npm ci --ignore-scripts
 
-RUN npm install
 COPY . .
 RUN npm run build
 
-FROM node:24.10.0-alpine3.22 AS production
 
-RUN apk add dumb-init
+# ---------- production ----------
+FROM node:24.10.0-alpine3.22 AS production
+WORKDIR /usr/src/app
+
+RUN apk add --no-cache dumb-init
 
 ENV NODE_ENV=production
 ENV SERVER_PORT=8080
 
+# install production deps only
+COPY package*.json ./
+RUN npm ci --omit=dev --ignore-scripts
 
-WORKDIR /usr/src/app
+# compiled app + runtime assets
+COPY --from=build /tmp/buildApp/dist ./
+COPY ./config ./config
 
-COPY --chown=node:node package*.json ./
-COPY .husky/ .husky/
-
-RUN npm ci --only=production
-
-COPY --chown=node:node --from=build /tmp/buildApp/dist .
-COPY --chown=node:node ./config ./config
-
+# אם אתה צריך migrations/knex runtime בתוך הקונטיינר:
+# (רק אם אתה מריץ migrate מתוך הקונטיינר או שהאפליקציה משתמשת בזה בזמן ריצה)
+COPY ./migrations ./migrations
+# COPY ./knexfile.js ./knexfile.js   # אם קיים
 
 USER node
 EXPOSE 8080
+
 CMD ["dumb-init", "node", "--import", "./instrumentation.mjs", "./index.js"]

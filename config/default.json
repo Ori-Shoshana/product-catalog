@@ -17,7 +17,18 @@
     }
   },
   "db": {
-    "connectionString": "postgres://postgres:postgres@localhost:5432/products_db"
+    "type": "postgres",
+    "host": "localhost",
+    "port": 5432,
+    "username": "postgres",
+    "password": "postgres",
+    "enableSslAuth": false,
+    "sslPaths": {
+      "ca": "",
+      "key": "",
+      "cert": "",
+      "database": ""
+    }
   },
   "server": {
     "port": 8080,

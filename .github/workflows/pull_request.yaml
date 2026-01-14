@@ -72,6 +72,7 @@ jobs:
   tests:
     name: Run Tests
     runs-on: ubuntu-latest
+
     services:
       postgres:
         image: postgis/postgis:14-3.4
@@ -86,9 +87,11 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+
     strategy:
       matrix:
         node: [24.x]
+
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v5
@@ -98,31 +101,17 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
 
-      - name: Run tests
+      - name: Run DB migrations
         env:
           DB_HOST: 127.0.0.1
           DB_PORT: 5432
           DB_USER: postgres
           DB_PASSWORD: postgres
           DB_NAME: products_db
-          PGPASSWORD: postgres
-        run: |
-          psql -h localhost -U postgres -d products_db -c "
-            CREATE EXTENSION IF NOT EXISTS postgis;
-            CREATE TABLE IF NOT EXISTS products (
-              id SERIAL PRIMARY KEY,
-              name TEXT NOT NULL,
-              description TEXT,
-              bounding_polygon GEOMETRY,
-              consumption_link TEXT,
-              type TEXT,
-              consumption_protocol TEXT,
-              resolution_best FLOAT,
-              min_zoom INTEGER,
-              max_zoom INTEGER
-            );"
+        run: npm run migrate
 
-            npm run test
+      - name: Run tests
+        run: npm run test
 
       - uses: actions/upload-artifact@v4
         with:

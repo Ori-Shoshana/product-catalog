@@ -42,6 +42,12 @@ paths:
                   $ref: '#/components/schemas/Product'
         400:
           $ref: '#/components/responses/BadRequest'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error'
 
     post:
       operationId: createProduct
@@ -63,6 +69,12 @@ paths:
                 $ref: '#/components/schemas/Product'
         400:
           $ref: '#/components/responses/BadRequest'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error'
 
   /products/{id}:
     parameters:
@@ -82,17 +94,17 @@ paths:
         404:
           $ref: '#/components/responses/NotFound'
 
-    put:
+    patch:
       operationId: updateProduct
       tags:
         - Product
-      summary: Update product
+      summary: Partially update product
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ProductInput'
+              $ref: '#/components/schemas/ProductUpdate'
       responses:
         200:
           description: Updated
@@ -122,6 +134,7 @@ components:
       required: true
       schema:
         type: string
+
     Name:
       name: name
       in: query
@@ -165,6 +178,7 @@ components:
     BoundingPolygonIntersects:
       name: boundingPolygonIntersects
       in: query
+      description: Geometry in WKT (Well-Known Text) format
       schema:
         $ref: '#/components/schemas/GeometryString'
 
@@ -213,6 +227,27 @@ components:
     ProductInput:
       type: object
       required: [name, boundingPolygon, type, consumptionProtocol]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        boundingPolygon:
+          $ref: '#/components/schemas/GeometryString'
+        type:
+          $ref: '#/components/schemas/ProductType'
+        consumptionProtocol:
+          $ref: '#/components/schemas/ConsumptionProtocol'
+        resolutionBest:
+          $ref: '#/components/schemas/Resolution'
+        minZoom:
+          $ref: '#/components/schemas/ZoomLevel'
+        maxZoom:
+          $ref: '#/components/schemas/ZoomLevel'
+
+    ProductUpdate:
+      type: object
+      additionalProperties: false
       properties:
         name:
           type: string

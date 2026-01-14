@@ -30,14 +30,14 @@ export type paths = {
     };
     /** Get product by id */
     get: operations['getProductById'];
-    /** Update product */
-    put: operations['updateProduct'];
+    put?: never;
     post?: never;
     /** Delete product */
     delete: operations['deleteProduct'];
     options?: never;
     head?: never;
-    patch?: never;
+    /** Partially update product */
+    patch: operations['updateProduct'];
     trace?: never;
   };
 };
@@ -61,6 +61,16 @@ export type components = {
       boundingPolygon: components['schemas']['GeometryString'];
       type: components['schemas']['ProductType'];
       consumptionProtocol: components['schemas']['ConsumptionProtocol'];
+      resolutionBest?: components['schemas']['Resolution'];
+      minZoom?: components['schemas']['ZoomLevel'];
+      maxZoom?: components['schemas']['ZoomLevel'];
+    };
+    ProductUpdate: {
+      name?: string;
+      description?: string;
+      boundingPolygon?: components['schemas']['GeometryString'];
+      type?: components['schemas']['ProductType'];
+      consumptionProtocol?: components['schemas']['ConsumptionProtocol'];
       resolutionBest?: components['schemas']['Resolution'];
       minZoom?: components['schemas']['ZoomLevel'];
       maxZoom?: components['schemas']['ZoomLevel'];
@@ -99,6 +109,7 @@ export type components = {
     ResolutionBest: components['schemas']['Resolution'];
     MinZoomGreater: components['schemas']['ZoomLevel'];
     MaxZoomGreater: components['schemas']['ZoomLevel'];
+    /** @description Geometry in WKT (Well-Known Text) format */
     BoundingPolygonIntersects: components['schemas']['GeometryString'];
   };
   requestBodies: never;
@@ -118,6 +129,7 @@ export interface operations {
         resolutionBest?: components['parameters']['ResolutionBest'];
         minZoomGreater?: components['parameters']['MinZoomGreater'];
         maxZoomGreater?: components['parameters']['MaxZoomGreater'];
+        /** @description Geometry in WKT (Well-Known Text) format */
         boundingPolygonIntersects?: components['parameters']['BoundingPolygonIntersects'];
       };
       header?: never;
@@ -136,6 +148,15 @@ export interface operations {
         };
       };
       400: components['responses']['BadRequest'];
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['error'];
+        };
+      };
     };
   };
   createProduct: {
@@ -161,6 +182,15 @@ export interface operations {
         };
       };
       400: components['responses']['BadRequest'];
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['error'];
+        };
+      };
     };
   };
   getProductById: {
@@ -175,33 +205,6 @@ export interface operations {
     requestBody?: never;
     responses: {
       /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['Product'];
-        };
-      };
-      404: components['responses']['NotFound'];
-    };
-  };
-  updateProduct: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: components['parameters']['ProductId'];
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['ProductInput'];
-      };
-    };
-    responses: {
-      /** @description Updated */
       200: {
         headers: {
           [name: string]: unknown;
@@ -230,6 +233,33 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      404: components['responses']['NotFound'];
+    };
+  };
+  updateProduct: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['parameters']['ProductId'];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ProductUpdate'];
+      };
+    };
+    responses: {
+      /** @description Updated */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Product'];
+        };
       };
       404: components['responses']['NotFound'];
     };

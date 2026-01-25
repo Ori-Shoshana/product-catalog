@@ -72,9 +72,26 @@ jobs:
   tests:
     name: Run Tests
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgis/postgis:14-3.4
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: products_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     strategy:
       matrix:
         node: [24.x]
+
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v5
@@ -83,6 +100,15 @@ jobs:
         uses: MapColonies/shared-workflows/actions/init-npm@init-npm-v1
         with:
           node-version: ${{ matrix.node }}
+
+      - name: Run DB migrations
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_NAME: products_db
+        run: npm run migrate
 
       - name: Run tests
         run: npm run test

@@ -13,7 +13,21 @@
     "shared": {},
     "logger": {
       "level": "info",
-      "prettyPrint": false
+      "prettyPrint": true
+    }
+  },
+  "db": {
+    "type": "postgres",
+    "host": "localhost",
+    "port": 5432,
+    "username": "postgres",
+    "password": "postgres",
+    "enableSslAuth": false,
+    "sslPaths": {
+      "ca": "",
+      "key": "",
+      "cert": "",
+      "database": ""
     }
   },
   "server": {

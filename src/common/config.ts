@@ -11,10 +11,10 @@ let configInstance: ConfigType | undefined;
  * This should only be called from the instrumentation file.
  * @returns A Promise that resolves when the configuration is successfully initialized.
  */
-async function initConfig(offlineMode?: boolean): Promise<void> {
+async function initConfig(): Promise<void> {
   configInstance = await config({
     schema: commonBoilerplateV2,
-    offlineMode,
+    offlineMode: true,
   });
 }
 

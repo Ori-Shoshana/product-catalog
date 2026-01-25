@@ -10,10 +10,8 @@ describe('docs', function () {
   let requestSender: DocsRequestSender;
 
   beforeAll(async function () {
-    await initConfig(true);
-  });
+    await initConfig();
 
-  beforeEach(async function () {
     const [app] = await getApp({
       override: [
         { token: SERVICES.LOGGER, provider: { useValue: jsLogger({ enabled: false }) } },
@@ -21,6 +19,7 @@ describe('docs', function () {
       ],
       useChild: true,
     });
+
     requestSender = new DocsRequestSender(app);
   });
 

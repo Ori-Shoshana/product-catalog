@@ -1,106 +1,276 @@
 openapi: 3.0.1
 info:
-  title: service-name
-  description: basic template for map colonies service
+  title: Geospatial Products Catalog
+  description: basic template for map colonies service for managing geospatial products
   version: 1.0.0
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: /
+    description: Current Environment
+
+security:
+  - {}
+
 paths:
-  /anotherResource:
+  /products:
     get:
-      operationId: getAnotherResource
+      operationId: getProducts
       tags:
-        - anotherResource
-      summary: gets the resource
+        - Product
+      summary: List products with geospatial filters
+      parameters:
+        - $ref: '#/components/parameters/Name'
+        - $ref: '#/components/parameters/ProductType'
+        - $ref: '#/components/parameters/ConsumptionProtocol'
+        - $ref: '#/components/parameters/MinZoom'
+        - $ref: '#/components/parameters/MaxZoom'
+        - $ref: '#/components/parameters/ResolutionBest'
+        - $ref: '#/components/parameters/MinZoomGreater'
+        - $ref: '#/components/parameters/MaxZoomGreater'
+        - $ref: '#/components/parameters/BoundingPolygonIntersects'
       responses:
         200:
-          description: OK
+          description: List of products
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/anotherResource'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
         400:
-          description: Bad Request
+          $ref: '#/components/responses/BadRequest'
+        500:
+          description: Internal Server Error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/error'
-  /resourceName:
-    get:
-      operationId: getResourceName
-      tags:
-        - resourceName
-      summary: gets the resource
-      responses:
-        200:
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/resource'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/error'
+
     post:
-      operationId: createResource
+      operationId: createProduct
       tags:
-        - resourceName
-      summary: creates a new record of type resource
+        - Product
+      summary: Create a new product
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/resource'
+              $ref: '#/components/schemas/ProductInput'
       responses:
         201:
-          description: created
+          description: Product created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/resource'
+                $ref: '#/components/schemas/Product'
         400:
-          description: Bad Request
+          $ref: '#/components/responses/BadRequest'
+        500:
+          description: Internal Server Error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/error'
-security:
-  - {}
+
+  /products/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ProductId'
+    get:
+      operationId: getProductById
+      tags:
+        - Product
+      summary: Get product by id
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        404:
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      operationId: updateProduct
+      tags:
+        - Product
+      summary: Partially update product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductUpdate'
+      responses:
+        200:
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        404:
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      operationId: deleteProduct
+      tags:
+        - Product
+      summary: Delete product
+      responses:
+        204:
+          description: Deleted
+        404:
+          $ref: '#/components/responses/NotFound'
+
 components:
+  parameters:
+    ProductId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+
+    Name:
+      name: name
+      in: query
+      schema:
+        type: string
+    ProductType:
+      name: type
+      in: query
+      schema:
+        $ref: '#/components/schemas/ProductType'
+    ConsumptionProtocol:
+      name: consumptionProtocol
+      in: query
+      schema:
+        $ref: '#/components/schemas/ConsumptionProtocol'
+    MinZoom:
+      name: minZoom
+      in: query
+      schema:
+        $ref: '#/components/schemas/ZoomLevel'
+    MaxZoom:
+      name: maxZoom
+      in: query
+      schema:
+        $ref: '#/components/schemas/ZoomLevel'
+    ResolutionBest:
+      name: resolutionBest
+      in: query
+      schema:
+        $ref: '#/components/schemas/Resolution'
+    MinZoomGreater:
+      name: minZoomGreater
+      in: query
+      schema:
+        $ref: '#/components/schemas/ZoomLevel'
+    MaxZoomGreater:
+      name: maxZoomGreater
+      in: query
+      schema:
+        $ref: '#/components/schemas/ZoomLevel'
+    BoundingPolygonIntersects:
+      name: boundingPolygonIntersects
+      in: query
+      description: Geometry in WKT (Well-Known Text) format
+      schema:
+        $ref: '#/components/schemas/GeometryString'
+
+  responses:
+    BadRequest:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+    NotFound:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+
   schemas:
     error:
       type: object
-      required:
-        - message
+      required: [message]
       properties:
         message:
           type: string
-    resource:
+
+    ProductType:
+      type: string
+      enum: [raster, rasterized vector, 3d tiles, QMesh]
+
+    ConsumptionProtocol:
+      type: string
+      enum: [WMS, WMTS, XYZ, 3D Tiles]
+
+    ZoomLevel:
+      type: integer
+      minimum: 0
+      maximum: 24
+
+    Resolution:
+      type: number
+      format: double
+
+    GeometryString:
+      type: string
+
+    ProductInput:
       type: object
-      required:
-        - id
-        - name
-        - description
+      required: [name, boundingPolygon, type, consumptionProtocol]
       properties:
-        id:
-          type: number
-          format: int64
         name:
           type: string
         description:
           type: string
-    anotherResource:
+        boundingPolygon:
+          $ref: '#/components/schemas/GeometryString'
+        type:
+          $ref: '#/components/schemas/ProductType'
+        consumptionProtocol:
+          $ref: '#/components/schemas/ConsumptionProtocol'
+        resolutionBest:
+          $ref: '#/components/schemas/Resolution'
+        minZoom:
+          $ref: '#/components/schemas/ZoomLevel'
+        maxZoom:
+          $ref: '#/components/schemas/ZoomLevel'
+
+    ProductUpdate:
       type: object
-      required:
-        - kind
-        - isAlive
+      additionalProperties: false
       properties:
-        kind:
+        name:
           type: string
-        isAlive:
-          type: boolean
+        description:
+          type: string
+        boundingPolygon:
+          $ref: '#/components/schemas/GeometryString'
+        type:
+          $ref: '#/components/schemas/ProductType'
+        consumptionProtocol:
+          $ref: '#/components/schemas/ConsumptionProtocol'
+        resolutionBest:
+          $ref: '#/components/schemas/Resolution'
+        minZoom:
+          $ref: '#/components/schemas/ZoomLevel'
+        maxZoom:
+          $ref: '#/components/schemas/ZoomLevel'
+
+    Product:
+      allOf:
+        - $ref: '#/components/schemas/ProductInput'
+        - type: object
+          required: [id]
+          properties:
+            id:
+              type: string
